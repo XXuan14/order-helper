@@ -4,6 +4,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!--
+    禁止瀏覽器（尤其是通訊軟體內建的瀏覽器）快取這個頁面，
+    確保大家點連結時抓到的一定是最新版本，
+    而不是幾天前的舊版 HTML。
+  -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
   <title>🍱 訂餐小幫手</title>
 
   <style>
@@ -287,7 +297,7 @@
   <!-- 標題 -->
   <section class="hero">
     <h1>🍱 訂餐小幫手</h1>
-    <p id="sub">每天 07:00 開放，10:30 結單</p>
+    <p id="sub">每天 08:00 開放，12:00 結單</p>
   </section>
 
   <!-- 今日菜單 -->
@@ -394,7 +404,20 @@
   <!-- 今日訂單 -->
   <section class="card">
 
-    <h2>📋 今日訂單</h2>
+    <div
+      class="row"
+      style="justify-content:space-between;align-items:center"
+    >
+      <h2>📋 今日訂單</h2>
+
+      <button
+        class="danger"
+        style="padding:6px 12px;font-size:13px"
+        onclick="clearTodayOrders()"
+      >
+        🗑️ 清空今日訂單
+      </button>
+    </div>
 
     <div class="stats">
 
@@ -463,7 +486,7 @@
     <h2>⬆️ 上傳今日菜單</h2>
 
     <div class="notice">
-      任何人都可以上傳今天的菜單圖片，每天 07:00–10:30 開放上傳。
+      任何人都可以上傳今天的菜單圖片，每天 08:00–12:00 開放上傳。
       再次上傳會覆蓋今天已有的菜單。
     </div>
 
@@ -579,23 +602,16 @@ const mins = () => {
 
 /* =========================================================
    判斷是否開放點餐
-   07:00 ～ 10:29 開放
-   10:30 ～ 隔日 06:59 結單
+   08:00 ～ 11:59 開放
+   12:00 ～ 隔日 07:59 結單
    ========================================================= */
 
 const isOrderOpen = () => {
 
-  /*
-    測試用：暫時強制回傳 true，不管現在幾點都算開放。
-    測試完畢後，請把下面這行刪掉，
-    讓程式改回用時間判斷（下面保留原本邏輯）。
-  */
-  return true;
-
   const currentMinutes = mins();
 
-  const openTime = 7 * 60;       // 07:00
-  const closeTime = 10 * 60 + 30; // 10:30
+  const openTime = 8 * 60;   // 08:00
+  const closeTime = 12 * 60; // 12:00
 
   return (
     currentMinutes >= openTime &&
@@ -1290,7 +1306,7 @@ async function addOrder() {
   if (!isOrderOpen()) {
 
     alert(
-      "已結單；每天 07:00 開放，10:30 結單。"
+      "已結單；每天 08:00 開放，12:00 結單。"
     );
 
     status();
@@ -1340,7 +1356,7 @@ async function addOrder() {
   if (!isOrderOpen()) {
 
     alert(
-      "現在已經超過 10:30，今日已結單。"
+      "現在已經超過 12:00，今日已結單。"
     );
 
     status();
@@ -1516,6 +1532,94 @@ async function toggleCancelled(id, current) {
 
 
 /* =========================================================
+   清空今日訂單
+   需要輸入密碼才能執行，並且要求二次確認，
+   避免任何人不小心（或惡意）按到就把整天的訂單清光。
+   ========================================================= */
+
+async function clearTodayOrders() {
+
+  if (!db) {
+    alert("訂餐系統尚未連線成功，請重新整理頁面。");
+    return;
+  }
+
+  if (!orders.length) {
+
+    alert("今天目前還沒有訂單，不需要清空。");
+
+    return;
+
+  }
+
+
+  const pwd =
+    prompt("要清空今日所有訂單，請輸入密碼：");
+
+
+  /*
+    使用者按取消時 prompt 會回傳 null，
+    這裡順便擋掉，避免誤判成密碼錯誤又跳一次 alert。
+  */
+  if (pwd === null) {
+
+    return;
+
+  }
+
+
+  if (pwd !== "12345") {
+
+    alert("密碼錯誤，未清空任何訂單。");
+
+    return;
+
+  }
+
+
+  const ok =
+    confirm(
+      `確定要清空今天全部 ${orders.length} 筆訂單嗎？此動作無法復原！`
+    );
+
+
+  if (!ok) {
+
+    return;
+
+  }
+
+
+  const r =
+    await db
+      .from("orders")
+      .delete()
+      .eq("order_date", date());
+
+
+  if (r.error) {
+
+    alert(
+      "清空失敗：\n" +
+      r.error.message
+    );
+
+    console.error(r.error);
+
+    return;
+
+  }
+
+
+  alert("✅ 今日訂單已全部清空！");
+
+
+  await loadOrders();
+
+}
+
+
+/* =========================================================
    上傳今日菜單
    任何人都可以上傳，不再需要登入。
    ========================================================= */
@@ -1530,7 +1634,7 @@ async function upload() {
   if (!isOrderOpen()) {
 
     alert(
-      "每天 07:00–10:30 才能上傳菜單。"
+      "每天 08:00–12:00 才能上傳菜單。"
     );
 
     return;
