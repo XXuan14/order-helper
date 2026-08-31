@@ -1,0 +1,1518 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🍱 訂餐小幫手</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #f6f7fb;
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Noto Sans TC",
+        sans-serif;
+      color: #222;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: auto;
+      padding: 16px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #ff9b52, #ff6868);
+      color: white;
+      border-radius: 22px;
+      padding: 24px;
+      margin-bottom: 14px;
+    }
+
+    .hero h1 {
+      margin: 0;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
+      margin: 13px 0;
+      box-shadow: 0 5px 20px #0001;
+    }
+
+    h2 {
+      font-size: 19px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .grow {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      font-size: 14px;
+      margin: 6px 0;
+    }
+
+    input,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #ddd;
+      border-radius: 11px;
+      box-sizing: border-box;
+    }
+
+    button {
+      border: 0;
+      border-radius: 11px;
+      padding: 10px 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .primary {
+      background: #ff7b39;
+      color: white;
+    }
+
+    .secondary {
+      background: #eee;
+    }
+
+    .success {
+      background: #e5f7ed;
+      color: #176e40;
+    }
+
+    .danger {
+      background: #ffe8e8;
+      color: #a33;
+    }
+
+    .menu {
+      width: 100%;
+      max-height: 620px;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+
+    .empty {
+      padding: 28px;
+      text-align: center;
+      color: #888;
+      background: #fafafa;
+      border-radius: 12px;
+    }
+
+    .status {
+      padding: 6px 10px;
+      border-radius: 99px;
+      font-size: 13px;
+    }
+
+    .open {
+      background: #e5f7ed;
+      color: #176e40;
+    }
+
+    .closed {
+      background: #ffe8e8;
+      color: #a33;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 9px;
+    }
+
+    .stat {
+      background: #fafafa;
+      padding: 12px;
+      border-radius: 12px;
+    }
+
+    .stat b {
+      display: block;
+      font-size: 21px;
+      margin-top: 4px;
+    }
+
+    .order {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .paid .name {
+      text-decoration: line-through;
+    }
+
+    .muted {
+      color: #777;
+      font-size: 13px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .notice {
+      background: #fff7e8;
+      padding: 11px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    /* 餐點統計 */
+
+    .summary {
+      background: #fff8f2;
+      border: 1px solid #ffe0cb;
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .summary-row {
+      padding: 13px 0;
+      border-bottom: 1px solid #f0e0d6;
+    }
+
+    .summary-row:last-child {
+      border-bottom: 0;
+    }
+
+    .summary-title {
+      font-size: 17px;
+      font-weight: bold;
+    }
+
+    .summary-people {
+      color: #666;
+      font-size: 14px;
+      margin-top: 5px;
+      line-height: 1.6;
+    }
+
+    .summary-price {
+      color: #e85b20;
+      font-weight: bold;
+      margin-top: 4px;
+    }
+
+    .copy-box {
+      margin-top: 12px;
+      background: #f7f7f7;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      white-space: pre-wrap;
+      line-height: 1.7;
+      color: #444;
+    }
+
+    @media (max-width: 650px) {
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .grow {
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <!-- 標題 -->
+  <section class="hero">
+    <h1>🍱 訂餐小幫手</h1>
+    <p id="sub">每天 07:00 開放，10:30 結單</p>
+  </section>
+
+  <!-- 今日菜單 -->
+  <section class="card">
+
+    <div
+      class="row"
+      style="justify-content:space-between;align-items:center"
+    >
+      <h2>📅 今日菜單</h2>
+
+      <span id="status" class="status open">
+        開放點餐
+      </span>
+    </div>
+
+    <div id="date"></div>
+
+    <div
+      id="menu"
+      class="empty"
+      style="margin-top:12px"
+    >
+      載入中…
+    </div>
+
+  </section>
+
+
+  <!-- 我要點餐 -->
+  <section class="card" id="orderCard">
+
+    <h2>📝 我要點餐</h2>
+
+    <div class="row">
+
+      <div class="grow">
+        <label>姓名</label>
+
+        <input
+          id="name"
+          placeholder="請輸入姓名"
+        >
+      </div>
+
+
+      <div class="grow">
+        <label>餐點</label>
+
+        <input
+          id="item"
+          placeholder="例如：雞腿便當"
+        >
+      </div>
+
+
+      <div style="width:100px">
+        <label>數量</label>
+
+        <input
+          id="qty"
+          type="number"
+          min="1"
+          value="1"
+        >
+      </div>
+
+
+      <div style="width:130px">
+        <label>單價</label>
+
+        <input
+          id="price"
+          type="number"
+          min="0"
+          placeholder="100"
+        >
+      </div>
+
+    </div>
+
+
+    <label>備註</label>
+
+    <textarea
+      id="note"
+      rows="2"
+      placeholder="例如：不要辣"
+    ></textarea>
+
+
+    <button
+      id="submit"
+      class="primary"
+      style="width:100%;margin-top:10px"
+      onclick="addOrder()"
+    >
+      🍱 送出訂單
+    </button>
+
+  </section>
+
+
+  <!-- 今日訂單 -->
+  <section class="card">
+
+    <h2>📋 今日訂單</h2>
+
+    <div class="stats">
+
+      <div class="stat">
+        人數
+        <b id="people">0</b>
+      </div>
+
+      <div class="stat">
+        份數
+        <b id="count">0</b>
+      </div>
+
+      <div class="stat">
+        總金額
+        <b id="total">$0</b>
+      </div>
+
+      <div class="stat">
+        已付款
+        <b id="paid">$0</b>
+      </div>
+
+    </div>
+
+    <div id="orders"></div>
+
+  </section>
+
+
+  <!-- 餐點統計 -->
+  <section class="card">
+
+    <h2>📦 餐點統計</h2>
+
+    <div
+      id="summary"
+      class="summary"
+    >
+      <div class="empty">
+        目前還沒有訂單。
+      </div>
+    </div>
+
+
+    <button
+      class="primary"
+      style="width:100%;margin-top:12px"
+      onclick="copySummary()"
+    >
+      📋 複製今日訂餐統計
+    </button>
+
+
+    <div
+      id="copyPreview"
+      class="copy-box hidden"
+    ></div>
+
+  </section>
+
+
+  <!-- 上傳今日菜單（開放給所有人） -->
+  <section class="card">
+
+    <h2>⬆️ 上傳今日菜單</h2>
+
+    <div class="notice">
+      任何人都可以上傳今天的菜單圖片，每天 07:00–10:30 開放上傳。
+      再次上傳會覆蓋今天已有的菜單。
+    </div>
+
+    <div class="row" style="margin-top:10px">
+
+      <div class="grow">
+        <label>店家名稱</label>
+
+        <input
+          id="shop"
+          placeholder="例如：阿明便當"
+        >
+      </div>
+
+      <div class="grow">
+        <label>菜單圖片</label>
+
+        <input
+          id="file"
+          type="file"
+          accept="image/*"
+        >
+      </div>
+
+    </div>
+
+    <button
+      id="uploadBtn"
+      class="primary"
+      style="width:100%;margin-top:10px"
+      onclick="upload()"
+    >
+      ⬆️ 上傳今天菜單
+    </button>
+
+  </section>
+
+</div>
+
+
+<!--
+  Supabase SDK：加上 onerror，
+  如果 CDN 被擋掉或載入失敗，
+  至少會清楚顯示錯誤，而不是卡在「載入中」。
+-->
+<script
+  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+  onerror="window.__supabaseLoadFailed = true;"
+></script>
+
+<script>
+
+/* =========================================================
+   Supabase 設定
+   ========================================================= */
+
+/*
+  注意：不要把變數取名叫 URL 或 name，
+  因為 URL 是瀏覽器內建的關鍵字（window.URL 建構子），
+  在最外層用 const URL = ... 會把它蓋掉，
+  導致 Supabase 內部呼叫 new URL(...) 驗證網址時失敗，
+  出現「Invalid supabaseUrl: Provided URL is malformed.」的錯誤。
+*/
+const SUPABASE_URL = "https://fkuptfhsygmrpalwbmpe.supabase.co";
+const SUPABASE_KEY =
+  "sb_publishable_oVoMG5Gta1ixYdXV9dRWpw_pmGHsrLm";
+
+let db = null;
+let orders = [];
+
+
+/* =========================================================
+   小工具
+   ========================================================= */
+
+const $ = x =>
+  document.getElementById(x);
+
+
+/* =========================================================
+   台灣日期
+   ========================================================= */
+
+const date = () =>
+  new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "Asia/Taipei"
+    }
+  ).format(new Date());
+
+
+/* =========================================================
+   台灣現在時間
+   ========================================================= */
+
+const mins = () => {
+
+  const d =
+    new Date(
+      new Date().toLocaleString(
+        "en-US",
+        {
+          timeZone: "Asia/Taipei"
+        }
+      )
+    );
+
+  return d.getHours() * 60 + d.getMinutes();
+
+};
+
+
+/* =========================================================
+   判斷是否開放點餐
+   07:00 ～ 10:29 開放
+   10:30 ～ 隔日 06:59 結單
+   ========================================================= */
+
+const isOrderOpen = () => {
+
+  /*
+    測試用：暫時強制回傳 true，不管現在幾點都算開放。
+    測試完畢後，請把下面這行刪掉，
+    讓程式改回用時間判斷（下面保留原本邏輯）。
+  */
+  return true;
+
+  const currentMinutes = mins();
+
+  const openTime = 7 * 60;       // 07:00
+  const closeTime = 10 * 60 + 30; // 10:30
+
+  return (
+    currentMinutes >= openTime &&
+    currentMinutes < closeTime
+  );
+
+};
+
+
+/* =========================================================
+   防止 HTML 注入
+   ========================================================= */
+
+const esc = s =>
+  String(s ?? "")
+    .replace(
+      /[&<>"']/g,
+      c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[c])
+    );
+
+
+/* =========================================================
+   開放 / 結單狀態
+   ========================================================= */
+
+function status() {
+
+  const isOpen =
+    isOrderOpen();
+
+
+  $("status").textContent =
+    isOpen
+      ? "開放點餐"
+      : "已結單";
+
+
+  $("status").className =
+    "status " +
+    (isOpen ? "open" : "closed");
+
+
+  $("orderCard")
+    .classList
+    .toggle(
+      "hidden",
+      !isOpen
+    );
+
+
+  const uploadBtn = $("uploadBtn");
+  if (uploadBtn) uploadBtn.disabled = !isOpen;
+
+
+  $("sub").textContent =
+    isOpen
+      ? "今天的午餐，現在可以點餐 / 上傳菜單！"
+      : "今天已結單，以下提供訂單與餐點統計。";
+
+
+  return isOpen;
+
+}
+
+
+/* =========================================================
+   顯示初始化錯誤（讓畫面不會卡在「載入中」）
+   ========================================================= */
+
+function showInitError(message) {
+
+  $("menu").innerHTML = `
+    <div class="empty">
+      <b>❌ 訂餐系統連線失敗</b><br><br>
+      ${esc(message)}
+      <br><br>
+      <button class="secondary" onclick="location.reload()">🔄 重新整理頁面</button>
+    </div>`;
+
+  $("orders").innerHTML =
+    '<div class="empty">目前無法讀取今日訂單。</div>';
+
+}
+
+
+/* =========================================================
+   載入今日資料
+   ========================================================= */
+
+async function load() {
+
+  $("date").textContent = date() + "（台灣時間）";
+  $("menu").innerHTML = '<div class="empty">正在連線到訂餐系統…</div>';
+
+  /*
+    最重要的修正：
+    如果 Supabase SDK 沒有載入成功（例如 CDN 被擋掉），
+    supabase.createClient 這行過去是寫在最外層、沒有保護，
+    一旦丟出例外，整支 script 就中斷，
+    畫面會永遠卡在「載入中」。
+    現在把它包進 try/catch，並在失敗時顯示明確錯誤。
+  */
+
+  try {
+
+    if (window.__supabaseLoadFailed || typeof supabase === "undefined") {
+      throw new Error(
+        "Supabase 程式庫載入失敗，請確認網路可以連到 cdn.jsdelivr.net，或稍後再試一次。"
+      );
+    }
+
+    if (!db) {
+      db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+
+    const menuRequest = db
+      .from("daily_menus")
+      .select("*")
+      .eq("menu_date", date())
+      .maybeSingle();
+
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Supabase 連線逾時，請確認網路與 Project URL。")),
+        10000
+      )
+    );
+
+    const result = await Promise.race([menuRequest, timeout]);
+
+    if (result.error) {
+      console.error("載入菜單失敗：", result.error);
+      $("menu").innerHTML = `
+        <div class="empty">
+          <b>❌ 菜單讀取失敗</b><br><br>
+          ${esc(result.error.message)}
+          <br><br>
+          <button class="secondary" onclick="load()">🔄 重新載入</button>
+        </div>`;
+    } else if (result.data?.image_url) {
+      $("menu").innerHTML = `
+        <img class="menu" src="${esc(result.data.image_url)}" alt="今日菜單"
+          onerror="this.outerHTML='<div class=&quot;empty&quot;><b>❌ 菜單圖片無法載入</b><br><br>請檢查 Supabase Storage 的 menus Bucket 是否為公開。</div>'">`;
+    } else {
+      $("menu").innerHTML = '<div class="empty">今天尚未上傳菜單。</div>';
+    }
+
+    if (result.data && $("shop")) $("shop").value = result.data.shop_name || "";
+
+    await loadOrders();
+    status();
+
+  } catch (err) {
+    console.error("網站初始化失敗：", err);
+    showInitError(err?.message || String(err));
+    status();
+  }
+}
+
+/* =========================================================
+   載入今日訂單
+   ========================================================= */
+
+async function loadOrders() {
+
+  if (!db) return;
+
+  const r =
+    await db
+      .from("orders")
+      .select("*")
+      .eq(
+        "order_date",
+        date()
+      )
+      .order(
+        "created_at"
+      );
+
+
+  if (r.error) {
+    console.error("載入訂單失敗：", r.error);
+    orders = [];
+    $("orders").innerHTML = `
+      <div class="empty">
+        <b>❌ 今日訂單讀取失敗</b><br><br>
+        ${esc(r.error.message)}
+      </div>`;
+    renderSummary();
+    return;
+  }
+
+
+  orders =
+    r.data || [];
+
+
+  render();
+
+  renderSummary();
+
+}
+
+
+/* =========================================================
+   顯示今日訂單
+   ========================================================= */
+
+function render() {
+
+  let total = 0;
+
+  let paid = 0;
+
+  let qtyTotal = 0;
+
+
+  orders.forEach(o => {
+
+    const money =
+      Number(o.qty) *
+      Number(o.unit_price);
+
+
+    total += money;
+
+    qtyTotal +=
+      Number(o.qty);
+
+
+    if (o.paid) {
+
+      paid += money;
+
+    }
+
+  });
+
+
+  $("people").textContent =
+    orders.length;
+
+
+  $("count").textContent =
+    qtyTotal;
+
+
+  $("total").textContent =
+    "$" +
+    total.toLocaleString();
+
+
+  $("paid").textContent =
+    "$" +
+    paid.toLocaleString();
+
+
+  if (!orders.length) {
+
+    $("orders").innerHTML = `
+      <div class="empty">
+        目前還沒有人點餐。
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  $("orders").innerHTML =
+    orders
+      .map(o => {
+
+        const money =
+          Number(o.qty) *
+          Number(o.unit_price);
+
+
+        return `
+          <div class="order ${o.paid ? "paid" : ""}">
+
+            <div>
+
+              <div class="name">
+
+                ${o.paid ? "⭕ " : ""}
+
+                ${esc(o.name)}
+
+                ${o.paid
+                  ? "🟢 已付款"
+                  : "🔴 未付款"
+                }
+
+              </div>
+
+
+              <div>
+
+                ${esc(o.item)}
+
+                × ${o.qty}
+
+                <b>
+                  $${money.toLocaleString()}
+                </b>
+
+              </div>
+
+
+              ${
+                o.note
+                  ? `
+                    <div class="muted">
+                      備註：
+                      ${esc(o.note)}
+                    </div>
+                  `
+                  : ""
+              }
+
+            </div>
+
+          </div>
+        `;
+
+      })
+      .join("");
+
+}
+
+
+/* =========================================================
+   餐點統計
+   ========================================================= */
+
+function getSummaryData() {
+
+  const groups = {};
+
+
+  orders.forEach(o => {
+
+    const item =
+      String(o.item || "")
+        .trim();
+
+
+    if (!item) {
+
+      return;
+
+    }
+
+
+    if (!groups[item]) {
+
+      groups[item] = {
+
+        qty: 0,
+
+        people: [],
+
+        total: 0
+
+      };
+
+    }
+
+
+    groups[item].qty +=
+      Number(o.qty) || 0;
+
+
+    groups[item].total +=
+      (Number(o.qty) || 0) *
+      (Number(o.unit_price) || 0);
+
+
+    const person =
+      String(o.name || "")
+        .trim();
+
+
+    if (
+      person &&
+      !groups[item].people.includes(person)
+    ) {
+
+      groups[item].people.push(person);
+
+    }
+
+  });
+
+
+  return groups;
+
+}
+
+
+/* =========================================================
+   顯示餐點統計
+   ========================================================= */
+
+function renderSummary() {
+
+  const groups =
+    getSummaryData();
+
+
+  const items =
+    Object.keys(groups);
+
+
+  if (!items.length) {
+
+    $("summary").innerHTML = `
+      <div class="empty">
+        目前還沒有訂單。
+      </div>
+    `;
+
+
+    $("copyPreview")
+      .classList
+      .add("hidden");
+
+
+    return;
+
+  }
+
+
+  $("summary").innerHTML =
+    items
+      .map(item => {
+
+        const g =
+          groups[item];
+
+
+        return `
+          <div class="summary-row">
+
+            <div class="summary-title">
+
+              🍱 ${esc(item)}
+
+              × ${g.qty} 份
+
+            </div>
+
+
+            <div class="summary-people">
+
+              👤 點餐人：
+
+              ${g.people
+                .map(esc)
+                .join("、")}
+
+            </div>
+
+
+            <div class="summary-price">
+
+              💰 $${g.total.toLocaleString()}
+
+            </div>
+
+          </div>
+        `;
+
+      })
+      .join("");
+
+}
+
+
+/* =========================================================
+   產生可以複製的文字
+   ========================================================= */
+
+function buildSummaryText() {
+
+  const groups =
+    getSummaryData();
+
+
+  const items =
+    Object.keys(groups);
+
+
+  if (!items.length) {
+
+    return "今日目前沒有訂單。";
+
+  }
+
+
+  let text =
+    "🍱 今日訂餐統計\n";
+
+
+  text +=
+    "日期：" +
+    date() +
+    "\n\n";
+
+
+  items.forEach((item, index) => {
+
+    const g =
+      groups[item];
+
+
+    text +=
+      `${index + 1}. ${item} × ${g.qty} 份\n`;
+
+
+    text +=
+      `   點餐人：${g.people.join("、")}\n`;
+
+
+    text +=
+      `   金額：$${g.total.toLocaleString()}\n`;
+
+
+    if (index < items.length - 1) {
+
+      text += "\n";
+
+    }
+
+  });
+
+
+  let totalQty = 0;
+
+  let totalMoney = 0;
+
+
+  items.forEach(item => {
+
+    totalQty +=
+      groups[item].qty;
+
+
+    totalMoney +=
+      groups[item].total;
+
+  });
+
+
+  text += "\n";
+
+  text += "────────────\n";
+
+  text +=
+    `總份數：${totalQty} 份\n`;
+
+  text +=
+    `總金額：$${totalMoney.toLocaleString()}`;
+
+
+  return text;
+
+}
+
+
+/* =========================================================
+   複製訂餐統計
+   ========================================================= */
+
+async function copySummary() {
+
+  const text =
+    buildSummaryText();
+
+
+  try {
+
+    await navigator.clipboard.writeText(text);
+
+
+    $("copyPreview").textContent =
+      "✅ 已複製！\n\n" +
+      text;
+
+
+    $("copyPreview")
+      .classList
+      .remove("hidden");
+
+
+    alert(
+      "✅ 今日訂餐統計已複製，可以直接貼到 LINE！"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Clipboard 失敗：",
+      error
+    );
+
+
+    $("copyPreview").textContent =
+      text;
+
+
+    $("copyPreview")
+      .classList
+      .remove("hidden");
+
+
+    alert(
+      "瀏覽器不允許自動複製，請從下方文字手動複製。"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   新增訂單
+   ========================================================= */
+
+async function addOrder() {
+
+  if (!db) {
+    alert("訂餐系統尚未連線成功，請重新整理頁面。");
+    return;
+  }
+
+  if (!isOrderOpen()) {
+
+    alert(
+      "已結單；每天 07:00 開放，10:30 結單。"
+    );
+
+    status();
+
+    return;
+
+  }
+
+
+  const name =
+    $("name").value.trim();
+
+
+  const item =
+    $("item").value.trim();
+
+
+  const qty =
+    Math.max(
+      1,
+      Number($("qty").value) || 1
+    );
+
+
+  const price =
+    Math.max(
+      0,
+      Number($("price").value) || 0
+    );
+
+
+  const note =
+    $("note").value.trim();
+
+
+  if (!name || !item) {
+
+    alert(
+      "請填姓名與餐點。"
+    );
+
+    return;
+
+  }
+
+
+  if (!isOrderOpen()) {
+
+    alert(
+      "現在已經超過 10:30，今日已結單。"
+    );
+
+    status();
+
+    return;
+
+  }
+
+
+  const r =
+    await db
+      .from("orders")
+      .insert({
+
+        order_date:
+          date(),
+
+        name:
+          name,
+
+        item:
+          item,
+
+        qty:
+          qty,
+
+        unit_price:
+          price,
+
+        note:
+          note
+
+      });
+
+
+  if (r.error) {
+
+    alert(
+      "送出失敗：\n" +
+      r.error.message
+    );
+
+
+    console.error(
+      r.error
+    );
+
+
+    return;
+
+  }
+
+
+  [
+    "name",
+    "item",
+    "note",
+    "price"
+  ]
+    .forEach(x => {
+
+      $(x).value = "";
+
+    });
+
+
+  $("qty").value = 1;
+
+
+  alert(
+    "✅ 訂單已送出！"
+  );
+
+
+  await loadOrders();
+
+}
+
+
+/* =========================================================
+   上傳今日菜單
+   任何人都可以上傳，不再需要登入。
+   ========================================================= */
+
+async function upload() {
+
+  if (!db) {
+    alert("訂餐系統尚未連線成功，請重新整理頁面。");
+    return;
+  }
+
+  if (!isOrderOpen()) {
+
+    alert(
+      "每天 07:00–10:30 才能上傳菜單。"
+    );
+
+    return;
+
+  }
+
+
+  const f =
+    $("file").files[0];
+
+
+  if (!f) {
+
+    alert(
+      "請選擇菜單圖片。"
+    );
+
+    return;
+
+  }
+
+
+  const shop =
+    $("shop").value.trim();
+
+
+  const ext =
+    f.name
+      .split(".")
+      .pop();
+
+
+  const path =
+    date() +
+    "/" +
+    crypto.randomUUID() +
+    "." +
+    ext;
+
+
+  let r =
+    await db
+      .storage
+      .from("menus")
+      .upload(
+        path,
+        f,
+        {
+          contentType: f.type,
+          upsert: false
+        }
+      );
+
+
+  if (r.error) {
+
+    alert(
+      "圖片上傳失敗：\n" +
+      r.error.message
+    );
+
+
+    console.error(
+      r.error
+    );
+
+
+    return;
+
+  }
+
+
+  const {
+    data
+  } =
+    db
+      .storage
+      .from("menus")
+      .getPublicUrl(path);
+
+
+  r =
+    await db
+      .from("daily_menus")
+      .upsert(
+
+        {
+          menu_date:
+            date(),
+
+          shop_name:
+            shop,
+
+          image_url:
+            data.publicUrl
+        },
+
+        {
+          onConflict:
+            "menu_date"
+        }
+
+      );
+
+
+  if (r.error) {
+
+    alert(
+      "菜單資料寫入失敗：\n" +
+      r.error.message
+    );
+
+
+    console.error(
+      r.error
+    );
+
+
+    return;
+
+  }
+
+
+  alert(
+    "✅ 今日菜單已更新！"
+  );
+
+
+  await load();
+
+}
+
+
+/* =========================================================
+   每 30 秒檢查一次開放 / 結單
+   ========================================================= */
+
+setInterval(
+  status,
+  30000
+);
+
+
+/* =========================================================
+   啟動
+   ========================================================= */
+
+load();
+
+</script>
+
+</body>
+</html>
