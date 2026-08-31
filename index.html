@@ -178,6 +178,33 @@
       text-decoration: line-through;
     }
 
+    /*
+      已取消的訂單：不整筆消失，
+      而是用刪除線 + 變淡顯示，
+      讓大家看得到「這筆本來有、後來取消了」。
+    */
+    .cancelled {
+      opacity: 0.5;
+    }
+
+    .cancelled .name,
+    .cancelled .item-line {
+      text-decoration: line-through;
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .order-actions button {
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
     .muted {
       color: #777;
       font-size: 13px;
@@ -792,7 +819,22 @@ function render() {
   let qtyTotal = 0;
 
 
+  let peopleCount = 0;
+
+
   orders.forEach(o => {
+
+    /*
+      已取消的訂單不計入統計，
+      但畫面上還是會顯示（用刪除線劃掉），
+      不會整筆消失。
+    */
+    if (o.cancelled) {
+
+      return;
+
+    }
+
 
     const money =
       Number(o.qty) *
@@ -803,6 +845,8 @@ function render() {
 
     qtyTotal +=
       Number(o.qty);
+
+    peopleCount += 1;
 
 
     if (o.paid) {
@@ -815,7 +859,7 @@ function render() {
 
 
   $("people").textContent =
-    orders.length;
+    peopleCount;
 
 
   $("count").textContent =
@@ -855,9 +899,9 @@ function render() {
 
 
         return `
-          <div class="order ${o.paid ? "paid" : ""}">
+          <div class="order ${o.paid ? "paid" : ""} ${o.cancelled ? "cancelled" : ""}">
 
-            <div>
+            <div style="flex:1">
 
               <div class="name">
 
@@ -870,10 +914,12 @@ function render() {
                   : "🔴 未付款"
                 }
 
+                ${o.cancelled ? "🚫 已取消" : ""}
+
               </div>
 
 
-              <div>
+              <div class="item-line">
 
                 ${esc(o.item)}
 
@@ -897,6 +943,25 @@ function render() {
                   : ""
               }
 
+
+              <div class="order-actions">
+
+                <button
+                  class="secondary"
+                  onclick='togglePaid(${JSON.stringify(o.id)}, ${o.paid ? "true" : "false"})'
+                >
+                  ${o.paid ? "↩️ 取消已付款" : "💰 標記已付款"}
+                </button>
+
+                <button
+                  class="danger"
+                  onclick='toggleCancelled(${JSON.stringify(o.id)}, ${o.cancelled ? "true" : "false"})'
+                >
+                  ${o.cancelled ? "↩️ 恢復訂單" : "🚫 取消訂單"}
+                </button>
+
+              </div>
+
             </div>
 
           </div>
@@ -918,6 +983,14 @@ function getSummaryData() {
 
 
   orders.forEach(o => {
+
+    /* 已取消的訂單不算進餐點統計 */
+    if (o.cancelled) {
+
+      return;
+
+    }
+
 
     const item =
       String(o.item || "")
@@ -1340,6 +1413,101 @@ async function addOrder() {
   alert(
     "✅ 訂單已送出！"
   );
+
+
+  await loadOrders();
+
+}
+
+
+/* =========================================================
+   標記 / 取消標記 已付款
+   任何人都可以按，資料庫會留下最新狀態。
+   ========================================================= */
+
+async function togglePaid(id, current) {
+
+  if (!db) {
+    alert("訂餐系統尚未連線成功，請重新整理頁面。");
+    return;
+  }
+
+  const r =
+    await db
+      .from("orders")
+      .update({
+        paid: !current
+      })
+      .eq("id", id);
+
+
+  if (r.error) {
+
+    alert(
+      "更新失敗：\n" +
+      r.error.message
+    );
+
+    console.error(r.error);
+
+    return;
+
+  }
+
+
+  await loadOrders();
+
+}
+
+
+/* =========================================================
+   取消 / 恢復 訂單
+   不會真的把資料刪掉，只是標記 cancelled，
+   畫面上用刪除線劃掉，而不是整筆消失。
+   ========================================================= */
+
+async function toggleCancelled(id, current) {
+
+  if (!db) {
+    alert("訂餐系統尚未連線成功，請重新整理頁面。");
+    return;
+  }
+
+  if (!current) {
+
+    const ok =
+      confirm("確定要取消這筆訂單嗎？（不會刪除，只會用刪除線標記）");
+
+    if (!ok) {
+
+      return;
+
+    }
+
+  }
+
+
+  const r =
+    await db
+      .from("orders")
+      .update({
+        cancelled: !current
+      })
+      .eq("id", id);
+
+
+  if (r.error) {
+
+    alert(
+      "更新失敗：\n" +
+      r.error.message
+    );
+
+    console.error(r.error);
+
+    return;
+
+  }
 
 
   await loadOrders();
