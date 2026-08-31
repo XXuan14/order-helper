@@ -78,17 +78,20 @@
 
     input,
     textarea,
+    select,
     button {
       font: inherit;
     }
 
     input,
-    textarea {
+    textarea,
+    select {
       width: 100%;
       padding: 11px;
       border: 1px solid #ddd;
       border-radius: 11px;
       box-sizing: border-box;
+      background: white;
     }
 
     button {
@@ -231,6 +234,18 @@
       font-size: 13px;
     }
 
+    .menu-note {
+      background: #fff0f0;
+      border: 1px solid #ffcccc;
+      color: #a33;
+      padding: 11px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 10px;
+      white-space: pre-wrap;
+    }
+
     /* 餐點統計 */
 
     .summary {
@@ -317,6 +332,11 @@
     <div id="date"></div>
 
     <div
+      id="menuNoteDisplay"
+      class="hidden"
+    ></div>
+
+    <div
       id="menu"
       class="empty"
       style="margin-top:12px"
@@ -375,6 +395,16 @@
           min="0"
           placeholder="100"
         >
+      </div>
+
+
+      <div style="width:110px">
+        <label>辣度</label>
+
+        <select id="spicy">
+          <option value="">（空白）</option>
+          <option value="辣">辣</option>
+        </select>
       </div>
 
     </div>
@@ -512,6 +542,22 @@
       </div>
 
     </div>
+
+    <label style="margin-top:10px">今日菜單備註（例如：雞腿飯已售完）</label>
+
+    <textarea
+      id="menuNote"
+      rows="2"
+      placeholder="例如：雞腿飯已售完、只剩排骨飯"
+    ></textarea>
+
+    <button
+      class="secondary"
+      style="width:100%;margin-top:8px"
+      onclick="updateMenuNote()"
+    >
+      📝 只更新備註（不用重新上傳圖片）
+    </button>
 
     <button
       id="uploadBtn"
@@ -765,7 +811,22 @@ async function load() {
       $("menu").innerHTML = '<div class="empty">今天尚未上傳菜單。</div>';
     }
 
+    if (result.data?.menu_note?.trim()) {
+
+      $("menuNoteDisplay").className = "menu-note";
+
+      $("menuNoteDisplay").innerHTML =
+        `📢 ${esc(result.data.menu_note.trim())}`;
+
+    } else {
+
+      $("menuNoteDisplay").className = "hidden";
+
+    }
+
+
     if (result.data && $("shop")) $("shop").value = result.data.shop_name || "";
+    if (result.data && $("menuNote")) $("menuNote").value = result.data.menu_note || "";
 
     await loadOrders();
     status();
@@ -941,6 +1002,8 @@ function render() {
 
                 × ${o.qty}
 
+                ${o.spicy === "辣" ? " 🌶️辣" : ""}
+
                 <b>
                   $${money.toLocaleString()}
                 </b>
@@ -990,6 +1053,25 @@ function render() {
 
 
 /* =========================================================
+   把「姓名 + 備註」組成一段顯示文字
+   例如：789（草莓多）；如果沒有備註，就只顯示姓名。
+   ========================================================= */
+
+function formatPerson(p) {
+
+  const tag =
+    p.spicy
+      ? (p.note ? `${p.note}、辣` : "辣")
+      : p.note;
+
+  return tag
+    ? `${p.name}（${tag}）`
+    : p.name;
+
+}
+
+
+/* =========================================================
    餐點統計
    ========================================================= */
 
@@ -1026,6 +1108,12 @@ function getSummaryData() {
 
         qty: 0,
 
+        /*
+          people 改成存「每一筆訂單」的姓名 + 備註，
+          不要再用姓名去重複合併——
+          不然同一個人如果分兩筆點、備註不一樣，
+          備註就會被吃掉，之前的 bug 就是這樣來的。
+        */
         people: [],
 
         total: 0
@@ -1049,12 +1137,22 @@ function getSummaryData() {
         .trim();
 
 
-    if (
-      person &&
-      !groups[item].people.includes(person)
-    ) {
+    const noteText =
+      String(o.note || "")
+        .trim();
 
-      groups[item].people.push(person);
+
+    if (person) {
+
+      groups[item].people.push({
+
+        name: person,
+
+        note: noteText,
+
+        spicy: o.spicy === "辣"
+
+      });
 
     }
 
@@ -1124,6 +1222,7 @@ function renderSummary() {
               👤 點餐人：
 
               ${g.people
+                .map(formatPerson)
                 .map(esc)
                 .join("、")}
 
@@ -1187,7 +1286,7 @@ function buildSummaryText() {
 
 
     text +=
-      `   點餐人：${g.people.join("、")}\n`;
+      `   點餐人：${g.people.map(formatPerson).join("、")}\n`;
 
 
     text +=
@@ -1303,6 +1402,17 @@ async function addOrder() {
     return;
   }
 
+  /*
+    防止連點：如果按鈕已經被鎖住（代表上一次還在送出中），
+    直接擋掉，避免網路延遲時使用者連按兩下、送出兩筆一樣的訂單。
+  */
+  if ($("submit").disabled) {
+
+    return;
+
+  }
+
+
   if (!isOrderOpen()) {
 
     alert(
@@ -1342,6 +1452,10 @@ async function addOrder() {
     $("note").value.trim();
 
 
+  const spicy =
+    $("spicy").value;
+
+
   if (!name || !item) {
 
     alert(
@@ -1366,6 +1480,10 @@ async function addOrder() {
   }
 
 
+  $("submit").disabled = true;
+  $("submit").textContent = "送出中…";
+
+
   const r =
     await db
       .from("orders")
@@ -1387,7 +1505,10 @@ async function addOrder() {
           price,
 
         note:
-          note
+          note,
+
+        spicy:
+          spicy
 
       });
 
@@ -1403,6 +1524,10 @@ async function addOrder() {
     console.error(
       r.error
     );
+
+
+    $("submit").disabled = false;
+    $("submit").textContent = "🍱 送出訂單";
 
 
     return;
@@ -1424,6 +1549,12 @@ async function addOrder() {
 
 
   $("qty").value = 1;
+
+  $("spicy").value = "";
+
+
+  $("submit").disabled = false;
+  $("submit").textContent = "🍱 送出訂單";
 
 
   alert(
@@ -1729,7 +1860,10 @@ async function upload() {
             shop,
 
           image_url:
-            data.publicUrl
+            data.publicUrl,
+
+          menu_note:
+            $("menuNote").value.trim()
         },
 
         {
@@ -1761,6 +1895,81 @@ async function upload() {
   alert(
     "✅ 今日菜單已更新！"
   );
+
+
+  await load();
+
+}
+
+
+/* =========================================================
+   只更新今日菜單備註
+   不用重新選圖片，方便隨時標記「XX 賣完了」之類的訊息。
+   ========================================================= */
+
+async function updateMenuNote() {
+
+  if (!db) {
+    alert("訂餐系統尚未連線成功，請重新整理頁面。");
+    return;
+  }
+
+  if (!isOrderOpen()) {
+
+    alert(
+      "每天 08:00–12:00 才能更新菜單備註。"
+    );
+
+    return;
+
+  }
+
+
+  const note =
+    $("menuNote").value.trim();
+
+
+  /*
+    只把 menu_date 跟 menu_note 放進 upsert，
+    Supabase 只會更新這兩個欄位，
+    不會動到已經上傳的圖片跟店家名稱。
+  */
+  const r =
+    await db
+      .from("daily_menus")
+      .upsert(
+
+        {
+          menu_date:
+            date(),
+
+          menu_note:
+            note
+        },
+
+        {
+          onConflict:
+            "menu_date"
+        }
+
+      );
+
+
+  if (r.error) {
+
+    alert(
+      "備註更新失敗：\n" +
+      r.error.message
+    );
+
+    console.error(r.error);
+
+    return;
+
+  }
+
+
+  alert("✅ 菜單備註已更新！");
 
 
   await load();
