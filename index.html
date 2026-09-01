@@ -329,6 +329,18 @@
       </span>
     </div>
 
+    <div style="text-align:right;margin-top:4px">
+      <a
+        href="javascript:void(0)"
+        id="forceOpenToggle"
+        class="muted"
+        style="text-decoration:underline;cursor:pointer"
+        onclick="toggleForceOpen()"
+      >
+        🔓 測試模式（不限時間）
+      </a>
+    </div>
+
     <div id="date"></div>
 
     <div
@@ -652,7 +664,23 @@ const mins = () => {
    12:00 ～ 隔日 07:59 結單
    ========================================================= */
 
+/*
+  測試模式：在網頁上輸入密碼就能暫時關掉時間限制，
+  不用每次都請人改程式碼。
+  這個狀態只存在瀏覽器記憶體裡，
+  重新整理頁面就會自動恢復成正常的時間限制，
+  不會有人不小心讓它一直開著忘記關。
+*/
+let forceOpen = false;
+
+
 const isOrderOpen = () => {
+
+  if (forceOpen) {
+
+    return true;
+
+  }
 
   const currentMinutes = mins();
 
@@ -665,6 +693,54 @@ const isOrderOpen = () => {
   );
 
 };
+
+
+/* =========================================================
+   切換測試模式（輸入密碼才能開啟）
+   ========================================================= */
+
+function toggleForceOpen() {
+
+  if (forceOpen) {
+
+    forceOpen = false;
+
+    alert("已關閉測試模式，恢復正常的 08:00–12:00 時間限制。");
+
+    status();
+
+    return;
+
+  }
+
+
+  const pwd =
+    prompt("要開啟測試模式（不限時間），請輸入密碼：");
+
+
+  if (pwd === null) {
+
+    return;
+
+  }
+
+
+  if (pwd !== "12345") {
+
+    alert("密碼錯誤，未開啟測試模式。");
+
+    return;
+
+  }
+
+
+  forceOpen = true;
+
+  alert("✅ 測試模式已開啟，現在不管幾點都能點餐、上傳菜單。\n（重新整理頁面就會自動恢復正常時間限制）");
+
+  status();
+
+}
 
 
 /* =========================================================
@@ -696,9 +772,9 @@ function status() {
 
 
   $("status").textContent =
-    isOpen
-      ? "開放點餐"
-      : "已結單";
+    forceOpen
+      ? "🔓 測試模式開放中"
+      : (isOpen ? "開放點餐" : "已結單");
 
 
   $("status").className =
@@ -716,6 +792,16 @@ function status() {
 
   const uploadBtn = $("uploadBtn");
   if (uploadBtn) uploadBtn.disabled = !isOpen;
+
+
+  if ($("forceOpenToggle")) {
+
+    $("forceOpenToggle").textContent =
+      forceOpen
+        ? "🔒 關閉測試模式"
+        : "🔓 測試模式（不限時間）";
+
+  }
 
 
   $("sub").textContent =
@@ -1108,6 +1194,10 @@ function getSummaryData() {
 
         qty: 0,
 
+        spicyQty: 0,
+
+        plainQty: 0,
+
         /*
           people 改成存「每一筆訂單」的姓名 + 備註，
           不要再用姓名去重複合併——
@@ -1125,6 +1215,19 @@ function getSummaryData() {
 
     groups[item].qty +=
       Number(o.qty) || 0;
+
+
+    if (o.spicy === "辣") {
+
+      groups[item].spicyQty +=
+        Number(o.qty) || 0;
+
+    } else {
+
+      groups[item].plainQty +=
+        Number(o.qty) || 0;
+
+    }
 
 
     groups[item].total +=
@@ -1214,6 +1317,12 @@ function renderSummary() {
 
               × ${g.qty} 份
 
+              ${
+                g.spicyQty > 0
+                  ? `<span class="muted">（🌶️辣 ${g.spicyQty}、不辣 ${g.plainQty}）</span>`
+                  : ""
+              }
+
             </div>
 
 
@@ -1282,7 +1391,9 @@ function buildSummaryText() {
 
 
     text +=
-      `${index + 1}. ${item} × ${g.qty} 份\n`;
+      `${index + 1}. ${item} × ${g.qty} 份` +
+      (g.spicyQty > 0 ? `（辣 ${g.spicyQty}、不辣 ${g.plainQty}）` : "") +
+      "\n";
 
 
     text +=
