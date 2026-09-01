@@ -337,7 +337,7 @@
         style="text-decoration:underline;cursor:pointer"
         onclick="toggleForceOpen()"
       >
-        🔓 測試模式（不限時間）
+        🔓 手動開放（不限時間）
       </a>
     </div>
 
@@ -665,7 +665,7 @@ const mins = () => {
    ========================================================= */
 
 /*
-  測試模式：在網頁上輸入密碼就能暫時關掉時間限制，
+  手動開放：在網頁上輸入密碼就能暫時關掉時間限制，
   不用每次都請人改程式碼。
   這個狀態只存在瀏覽器記憶體裡，
   重新整理頁面就會自動恢復成正常的時間限制，
@@ -696,7 +696,7 @@ const isOrderOpen = () => {
 
 
 /* =========================================================
-   切換測試模式（輸入密碼才能開啟）
+   切換手動開放（輸入密碼才能開啟）
    ========================================================= */
 
 function toggleForceOpen() {
@@ -705,7 +705,7 @@ function toggleForceOpen() {
 
     forceOpen = false;
 
-    alert("已關閉測試模式，恢復正常的 08:00–12:00 時間限制。");
+    alert("已關閉手動開放，恢復正常的 08:00–12:00 時間限制。");
 
     status();
 
@@ -715,7 +715,7 @@ function toggleForceOpen() {
 
 
   const pwd =
-    prompt("要開啟測試模式（不限時間），請輸入密碼：");
+    prompt("要開啟手動開放（不限時間），請輸入密碼：");
 
 
   if (pwd === null) {
@@ -727,7 +727,7 @@ function toggleForceOpen() {
 
   if (pwd !== "12345") {
 
-    alert("密碼錯誤，未開啟測試模式。");
+    alert("密碼錯誤，未開啟手動開放。");
 
     return;
 
@@ -736,7 +736,7 @@ function toggleForceOpen() {
 
   forceOpen = true;
 
-  alert("✅ 測試模式已開啟，現在不管幾點都能點餐、上傳菜單。\n（重新整理頁面就會自動恢復正常時間限制）");
+  alert("✅ 手動開放已開啟，現在不管幾點都能點餐、上傳菜單。\n（重新整理頁面就會自動恢復正常時間限制）");
 
   status();
 
@@ -773,7 +773,7 @@ function status() {
 
   $("status").textContent =
     forceOpen
-      ? "🔓 測試模式開放中"
+      ? "🔓 手動開放中"
       : (isOpen ? "開放點餐" : "已結單");
 
 
@@ -798,8 +798,8 @@ function status() {
 
     $("forceOpenToggle").textContent =
       forceOpen
-        ? "🔒 關閉測試模式"
-        : "🔓 測試模式（不限時間）";
+        ? "🔒 關閉手動開放"
+        : "🔓 手動開放（不限時間）";
 
   }
 
